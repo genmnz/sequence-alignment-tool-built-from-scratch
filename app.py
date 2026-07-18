@@ -64,6 +64,7 @@ if st.button("Run Alignment"):
             part2 = align2[i : i + line_length]
     
             st.code(f"{part1}\n{part_sym}\n{part2}", language="text")
+            
 
 
 
