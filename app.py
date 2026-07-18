@@ -27,8 +27,15 @@ def get_sequence(method, label, key):
         if uploaded_file :
             
             stringio = io.StringIO(uploaded_file.getvalue().decode("utf-8"))
-            record = SeqIO.read(stringio, "fasta")
-            return str(record.seq).upper()
+
+            try:
+                
+                record = SeqIO.read(stringio, "fasta")
+                return str(record.seq).upper()
+            except Exception as e :
+                st.error(f"Error reading FASTA file: {e}")
+                return None 
+    
     return ""
 
 seq1 = get_sequence(input_method, "first sequence", "seq1")
