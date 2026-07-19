@@ -1,17 +1,24 @@
-def read_sequence(filename):
+def parse_sequence(text):
     """
-    Reads a DNA/Protein sequence from a text or FASTA file.
+    Parses a DNA/Protein sequence from raw text or FASTA content.
     Removes FASTA headers (>) and joins multiline sequences.
     """
     seq = []
-    with open(filename, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith(">"):
-                continue
-            seq.append(line)
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith(">"):
+            continue
+        seq.append(line)
 
     return "".join(seq).upper()
+
+
+def read_sequence(filename):
+    """
+    Reads a DNA/Protein sequence from a text or FASTA file.
+    """
+    with open(filename, "r") as f:
+        return parse_sequence(f.read())
 
 
 def global_alignment(seq1, seq2, MATCH, MISMATCH, GAP):

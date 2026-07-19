@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sequence Alignment</title>
+<!-- Set this if the API is hosted separately from this page (e.g. page on Netlify,
+     API on Render). Leave empty for same-origin. -->
+<meta name="api-base" content="">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #17181a;
+    --muted: #6b7075;
+    --line: #e2e5e9;
+    --field: #ffffff;
+    --accent: #2f6f4e;
+    --accent-fg: #ffffff;
+    --error: #a3342a;
+    --match: #2f6f4e;
+    --mismatch: #a3342a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181a;
+      --fg: #e9eaec;
+      --muted: #9aa0a6;
+      --line: #2e3236;
+      --field: #1e2124;
+      --accent: #5aa17c;
+      --accent-fg: #10120f;
+      --error: #e0796d;
+      --match: #7dbb98;
+      --mismatch: #e0796d;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 2rem 1.25rem 4rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  main { max-width: 860px; margin: 0 auto; }
+
+  h1 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.25rem;
+  }
+
+  .sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 2rem; }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+
+  textarea, input[type="number"] {
+    width: 100%;
+    background: var(--field);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.6rem 0.7rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.875rem;
+  }
+
+  textarea { min-height: 7rem; resize: vertical; }
+
+  textarea:focus, input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+    border-color: transparent;
+  }
+
+  .seqs { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+  .params { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); margin-top: 1.25rem; }
+
+  @media (max-width: 620px) {
+    .seqs, .params { grid-template-columns: 1fr; }
+  }
+
+  fieldset {
+    border: 0;
+    padding: 0;
+    margin: 1.25rem 0 0;
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+  }
+
+  fieldset span { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+
+  .radio { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
+  .radio input { accent-color: var(--accent); }
+
+  button {
+    margin-top: 1.5rem;
+    background: var(--accent);
+    color: var(--accent-fg);
+    border: 0;
+    border-radius: 6px;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.9rem;
+    font-weight: 550;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.55; cursor: default; filter: none; }
+
+  #out { margin-top: 2.25rem; }
+  #out:empty { display: none; }
+
+  .score {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.25rem;
+  }
+
+  .score b { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .score span { font-size: 0.8rem; color: var(--muted); }
+
+  pre {
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    margin: 0 0 0.75rem;
+    white-space: pre;
+  }
+
+  pre .m { color: var(--match); }
+  pre .x { color: var(--mismatch); }
+  pre .n { color: var(--muted); }
+
+  .err {
+    color: var(--error);
+    font-size: 0.875rem;
+    border-left: 2px solid var(--error);
+    padding-left: 0.75rem;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sequence Alignment</h1>
+  <p class="sub">Needleman&ndash;Wunsch and Smith&ndash;Waterman. Paste raw sequence or FASTA.</p>
+
+  <form id="f">
+    <div class="seqs">
+      <div>
+        <label for="seq1">Sequence 1</label>
+        <textarea id="seq1" spellcheck="false" placeholder="GATTACA">GATTACA</textarea>
+      </div>
+      <div>
+        <label for="seq2">Sequence 2</label>
+        <textarea id="seq2" spellcheck="false" placeholder="GCATGCU">GCATGCU</textarea>
+      </div>
+    </div>
+
+    <div class="params">
+      <div>
+        <label for="match">Match</label>
+        <input type="number" id="match" value="5">
+      </div>
+      <div>
+        <label for="mismatch">Mismatch</label>
+        <input type="number" id="mismatch" value="-1">
+      </div>
+      <div>
+        <label for="gap">Gap</label>
+        <input type="number" id="gap" value="-3">
+      </div>
+    </div>
+
+    <fieldset>
+      <span>Mode</span>
+      <label class="radio"><input type="radio" name="mode" value="global" checked> Global</label>
+      <label class="radio"><input type="radio" name="mode" value="local"> Local</label>
+    </fieldset>
+
+    <button type="submit" id="go">Run Alignment</button>
+  </form>
+
+  <div id="out"></div>
+</main>
+
+<script>
+const API_BASE = document.querySelector('meta[name="api-base"]').content || '';
+const WIDTH = 60;
+const out = document.getElementById('out');
+const go = document.getElementById('go');
+
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+
+// Colour each residue by whether the symbol line marks it a match, mismatch, or gap.
+function paint(seq, symbols) {
+  let html = '';
+  for (let i = 0; i < seq.length; i++) {
+    const cls = symbols[i] === '|' ? 'm' : symbols[i] === '.' ? 'x' : 'n';
+    html += `<span class="${cls}">${esc(seq[i])}</span>`;
+  }
+  return html;
+}
+
+function render(d) {
+  const blocks = [];
+  for (let i = 0; i < d.length; i += WIDTH) {
+    const a1 = d.alignment1.slice(i, i + WIDTH);
+    const sy = d.symbols.slice(i, i + WIDTH);
+    const a2 = d.alignment2.slice(i, i + WIDTH);
+    blocks.push(
+      `<pre>${paint(a1, sy)}\n<span class="n">${esc(sy)}</span>\n${paint(a2, sy)}</pre>`
+    );
+  }
+  out.innerHTML =
+    `<div class="score"><b>${d.score}</b><span>score &middot; ${d.mode} &middot; ${d.length} columns</span></div>`
+    + blocks.join('');
+}
+
+document.getElementById('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  go.disabled = true;
+  out.innerHTML = '';
+
+  try {
+    const res = await fetch(API_BASE + '/align', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        seq1: document.getElementById('seq1').value,
+        seq2: document.getElementById('seq2').value,
+        match: document.getElementById('match').value,
+        mismatch: document.getElementById('mismatch').value,
+        gap: document.getElementById('gap').value,
+        mode: document.querySelector('input[name=mode]:checked').value,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    render(data);
+  } catch (err) {
+    out.innerHTML = `<p class="err">${esc(err.message)}</p>`;
+  } finally {
+    go.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
